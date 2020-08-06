@@ -33,7 +33,7 @@ MFRC522::MFRC522(	byte chipSelectPin,		///< Arduino pin connected to MFRC522's S
 				) :
 		_chipSelectPin(chipSelectPin),
 		_resetPowerDownPin(resetPowerDownPin),
-		_spi(&SPI)
+                _spi(SPI) //<<set it fix to the default SPI pin
 {
 
 } // End constructor
@@ -49,7 +49,7 @@ MFRC522::MFRC522(	byte chipSelectPin,		///< Arduino pin connected to MFRC522's S
  *   	MOSI2 = PB14
  *   	MISO2 = PB15
  */
-MFRC522(byte chipSelectPin, byte resetPowerDownPin, SPIClass &spiport):
+MFRC522::MFRC522(byte chipSelectPin, byte resetPowerDownPin, SPIClass &spiport):
 	_chipSelectPin(chipSelectPin),
 	_resetPowerDownPin(resetPowerDownPin),
 	_spi(spiport)
