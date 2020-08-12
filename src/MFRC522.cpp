@@ -1,4 +1,4 @@
-/*
+﻿/*
 * MFRC522.cpp - Library to use ARDUINO RFID MODULE KIT 13.56 MHZ WITH TAGS SPI W AND R BY COOQROBOT.
 * NOTE: Please also check the comments in MFRC522.h - they provide useful hints and background information.
 * Released into the public domain.
@@ -73,6 +73,11 @@ void MFRC522::PCD_WriteRegister(	PCD_Register reg,	///< The register to write to
 	_spi.transfer(value);
 	digitalWrite(_chipSelectPin, HIGH);		// Release slave again
 	_spi.endTransaction(); // Stop using the SPI bus
+
+        Serial.print("W: ");
+        Serial.print(reg);
+        Serial.print(" ");
+        Serial.println(value);
 } // End PCD_WriteRegister()
 
 /**
@@ -99,13 +104,21 @@ void MFRC522::PCD_WriteRegister(	PCD_Register reg,	///< The register to write to
  */
 byte MFRC522::PCD_ReadRegister(	PCD_Register reg	///< The register to read from. One of the PCD_Register enums.
 								) {
-	byte value;
+        byte value = 0;
 	_spi.beginTransaction(SPISettings(MFRC522_SPICLOCK, MSBFIRST, SPI_MODE0));	// Set the settings to work with SPI bus
 	digitalWrite(_chipSelectPin, LOW);			// Select slave
 	_spi.transfer(0x80 | reg);					// MSB == 1 is for reading. LSB is not used in address. Datasheet section 8.1.2.3.
 	value = _spi.transfer(0);					// Read the value back. Send 0 to stop reading.
 	digitalWrite(_chipSelectPin, HIGH);			// Release slave again
 	_spi.endTransaction(); // Stop using the SPI bus
+
+
+        Serial.print("R: ");
+        Serial.print(reg);
+        Serial.print(" ");
+        Serial.println(value);
+
+
 	return value;
 } // End PCD_ReadRegister()
 
@@ -188,7 +201,7 @@ MFRC522::StatusCode MFRC522::PCD_CalculateCRC(	byte *data,		///< In: Pointer to 
 	// TODO check/modify for other architectures than Arduino Uno 16bit
 
 	// Wait for the CRC calculation to complete. Each iteration of the while-loop takes 17.73us.
-	for (uint16_t i = 5000; i > 0; i--) {
+        for (uint16_t i = 20; i > 0; i--) {
 		// DivIrqReg[7..0] bits are: Set2 reserved reserved MfinActIRq reserved CRCIRq reserved reserved
 		byte n = PCD_ReadRegister(DivIrqReg);
 		if (n & 0x04) {									// CRCIRq bit set - calculation done
@@ -212,6 +225,14 @@ MFRC522::StatusCode MFRC522::PCD_CalculateCRC(	byte *data,		///< In: Pointer to 
  * Initializes the MFRC522 chip.
  */
 void MFRC522::PCD_Init() {
+
+    Serial.print("MFRC522::PCD_Init(), cs=");
+    Serial.print(_chipSelectPin);
+    Serial.print(" rpd=");
+    Serial.print(_resetPowerDownPin);
+    Serial.print(" UNUSED_PIN=");
+    Serial.println(UNUSED_PIN);
+
 	bool hardReset = false;
 
 	// Set the chipSelectPin as digital output, do not select the slave yet
@@ -221,6 +242,7 @@ void MFRC522::PCD_Init() {
 	// If a valid pin number has been set, pull device out of power down / reset state.
 	if (_resetPowerDownPin != UNUSED_PIN) {
 		// First set the resetPowerDownPin as digital input, to check the MFRC522 power down mode.
+                /*
 		pinMode(_resetPowerDownPin, INPUT);
 	
 		if (digitalRead(_resetPowerDownPin) == LOW) {	// The MFRC522 chip is in power down mode.
@@ -232,6 +254,15 @@ void MFRC522::PCD_Init() {
 			delay(50);
 			hardReset = true;
 		}
+                */
+            //we always reset when init
+            pinMode(_resetPowerDownPin, OUTPUT);		// Now set the resetPowerDownPin as digital output.
+            digitalWrite(_resetPowerDownPin, LOW);		// Make sure we have a clean LOW state.
+            delayMicroseconds(2000);				// 8.8.1 Reset timing requirements says about 100ns. Let us be generous: 2μsl
+            digitalWrite(_resetPowerDownPin, HIGH);		// Exit power down mode. This triggers a hard reset.
+            // Section 8.8.2 in the datasheet says the oscillator start-up time is the start up time of the crystal + 37,74μs. Let us be generous: 50ms.
+            delay(100);
+            hardReset = true;
 	}
 
 	if (!hardReset) { // Perform a soft reset if we haven't triggered a hard reset above.
@@ -299,7 +330,8 @@ void MFRC522::PCD_Reset() {
 void MFRC522::PCD_AntennaOn() {
 	byte value = PCD_ReadRegister(TxControlReg);
 	if ((value & 0x03) != 0x03) {
-		PCD_WriteRegister(TxControlReg, value | 0x03);
+            PCD_WriteRegister(TxControlReg, value | 0x03);
+            //PCD_WriteRegister(TxControlReg, 0b10000011 );
 	}
 } // End PCD_AntennaOn()
 
@@ -403,6 +435,9 @@ bool MFRC522::PCD_PerformSelfTest() {
 			reference = MFRC522_firmware_referenceV2_0;
 			break;
 		default:	// Unknown version
+                        Serial.print("Unknown firmware reference: 0x");
+                        Serial.println(version,16);
+
 			return false; // abort test
 	}
 	
@@ -503,7 +538,7 @@ MFRC522::StatusCode MFRC522::PCD_CommunicateWithPICC(	byte command,		///< The co
 	// Each iteration of the do-while-loop takes 17.86μs.
 	// TODO check/modify for other architectures than Arduino Uno 16bit
 	uint16_t i;
-	for (i = 2000; i > 0; i--) {
+        for (i = 2000; i > 0; i--) {
 		byte n = PCD_ReadRegister(ComIrqReg);	// ComIrqReg[7..0] bits are: Set1 TxIRq RxIRq IdleIRq HiAlertIRq LoAlertIRq ErrIRq TimerIRq
 		if (n & waitIRq) {					// One of the interrupts that signal success has been set.
 			break;
@@ -1932,7 +1967,14 @@ bool MFRC522::PICC_IsNewCardPresent() {
 	// Reset ModWidthReg
 	PCD_WriteRegister(ModWidthReg, 0x26);
 
+        Serial.println("PICC_IsNewCardPresent()");
 	MFRC522::StatusCode result = PICC_RequestA(bufferATQA, &bufferSize);
+
+        if (result==STATUS_TIMEOUT){
+            Serial.println(".. TIMEOUT");
+        }
+
+
 	return (result == STATUS_OK || result == STATUS_COLLISION);
 } // End PICC_IsNewCardPresent()
 
