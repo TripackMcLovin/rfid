@@ -74,10 +74,12 @@ void MFRC522::PCD_WriteRegister(	PCD_Register reg,	///< The register to write to
 	digitalWrite(_chipSelectPin, HIGH);		// Release slave again
 	_spi.endTransaction(); // Stop using the SPI bus
 
+        /*
         Serial.print("W: ");
         Serial.print(reg);
         Serial.print(" ");
         Serial.println(value);
+        */
 } // End PCD_WriteRegister()
 
 /**
@@ -112,14 +114,13 @@ byte MFRC522::PCD_ReadRegister(	PCD_Register reg	///< The register to read from.
 	digitalWrite(_chipSelectPin, HIGH);			// Release slave again
 	_spi.endTransaction(); // Stop using the SPI bus
 
-
+        /*
         Serial.print("R: ");
         Serial.print(reg);
         Serial.print(" ");
         Serial.println(value);
-
-
-	return value;
+        */
+        return value;
 } // End PCD_ReadRegister()
 
 /**
@@ -1967,12 +1968,14 @@ bool MFRC522::PICC_IsNewCardPresent() {
 	// Reset ModWidthReg
 	PCD_WriteRegister(ModWidthReg, 0x26);
 
-        Serial.println("PICC_IsNewCardPresent()");
+        //Serial.println("PICC_IsNewCardPresent()");
 	MFRC522::StatusCode result = PICC_RequestA(bufferATQA, &bufferSize);
 
+        /*
         if (result==STATUS_TIMEOUT){
             Serial.println(".. TIMEOUT");
         }
+        */
 
 
 	return (result == STATUS_OK || result == STATUS_COLLISION);
